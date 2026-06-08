@@ -15,10 +15,35 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err)
 })
 
-const originalQuery = pool.query.bind(pool)
-pool.query = (...args) => {
-  if (global.currentRequest) global.currentRequest._queryCount++
-  return originalQuery(...args)
+
+const originalConnect = pool.connect.bind(pool)
+pool.connect = (...args) => {
+  const callback = args[0]
+  if (typeof callback === 'function') {
+    return originalConnect((err, client, release) => {
+      if (client && !client._isWrapped) {
+        client._isWrapped = true
+        const originalClientQuery = client.query.bind(client)
+        client.query = (...queryArgs) => {
+          if (global.currentRequest) global.currentRequest._queryCount++
+          return originalClientQuery(...queryArgs)
+        }
+      }
+      callback(err, client, release)
+    })
+  } else {
+    return originalConnect(...args).then(client => {
+      if (client && !client._isWrapped) {
+        client._isWrapped = true
+        const originalClientQuery = client.query.bind(client)
+        client.query = (...queryArgs) => {
+          if (global.currentRequest) global.currentRequest._queryCount++
+          return originalClientQuery(...queryArgs)
+        }
+      }
+      return client
+    })
+  }
 }
 
 module.exports = pool

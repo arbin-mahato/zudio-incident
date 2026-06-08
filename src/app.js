@@ -22,6 +22,9 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - req._startTime
     console.log(`[PROFILE] ${req.method} ${req.originalUrl.split('?')[0]} → ${duration}ms | ${req._queryCount} queries`)
+    if (global.currentRequest === req) {
+      global.currentRequest = null
+    }
   })
   next()
 })
