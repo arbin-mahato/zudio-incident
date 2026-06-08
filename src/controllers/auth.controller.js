@@ -20,7 +20,6 @@ const register = async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' })
     }
 
-    // BUG: [CRITICAL] Plaintext password storage — passwords inserted directly without hashing.
     const hashedPassword = await bcrypt.hash(password, 12)
     const result = await pool.query(
       'INSERT INTO users (name, email, password, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, created_at',
@@ -63,7 +62,6 @@ const login = async (req, res) => {
 
     const user = result.rows[0]
 
-    // BUG: [CRITICAL] Plaintext password comparison — passwords compared directly without bcrypt.
     let isMatch = false
     try {
       if (user.password.startsWith('$2b$')) {

@@ -122,3 +122,16 @@ Server CPU and database connection saturation under high load, leading to extrem
 
 **Fix Plan:**
 Refactor the queries to use a single SQL `JOIN` fetching orders, order items, and product details in one round trip, then structure the result format in Javascript. Add missing indexes on foreign keys.
+
+---
+
+## Verification Table
+
+| Bug | Before | After | Verification Method |
+|-----|--------|-------|---------------------|
+| SQL Injection | Returns all products (200 records) | Returns 0 results (literal search) | GET /api/products?search=shirt' OR '1'='1 |
+| Plaintext Passwords | Password column: "password123" | Password column: "$2b$12$..." | SELECT password FROM users WHERE email='test_xxx@example.com' |
+| Double Discount | Coupon applied multiple times | 2nd concurrent checkout attempt returns 400 | POST /api/cart/checkout × 2 same coupon |
+| Stock Decrement | Stock unchanged after purchase | Stock reduced by quantity purchased | GET /api/products before vs after checkout |
+| N+1 Order History | 11ms / 106 queries | 4ms / 2 queries | Profiling middleware output |
+
