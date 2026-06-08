@@ -14,6 +14,17 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+// Timing middleware — add before routes
+app.use((req, res, next) => {
+  req._startTime = Date.now()
+  req._queryCount = 0
+  global.currentRequest = req
+  res.on('finish', () => {
+    const duration = Date.now() - req._startTime
+    console.log(`[PROFILE] ${req.method} ${req.originalUrl.split('?')[0]} → ${duration}ms | ${req._queryCount} queries`)
+  })
+  next()
+})
 
 // routes
 app.use('/api/products', productRoutes)
