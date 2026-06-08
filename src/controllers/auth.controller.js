@@ -1,7 +1,6 @@
 const pool = require('../db')
 const jwt = require('jsonwebtoken')
-// bcrypt is installed but haven't wired it up yet
-// const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt')
 // express-validator for future validation
 const { validationResult } = require('express-validator')
 
@@ -22,9 +21,10 @@ const register = async (req, res) => {
     }
 
     // BUG: [CRITICAL] Plaintext password storage — passwords inserted directly without hashing.
+    const hashedPassword = await bcrypt.hash(password, 12)
     const result = await pool.query(
       'INSERT INTO users (name, email, password, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, created_at',
-      [name, email, password, phone || null]
+      [name, email, hashedPassword, phone || null]
     )
 
     const user = result.rows[0]
@@ -64,7 +64,17 @@ const login = async (req, res) => {
     const user = result.rows[0]
 
     // BUG: [CRITICAL] Plaintext password comparison — passwords compared directly without bcrypt.
-    if (user.password !== password) {
+    let isMatch = false
+    try {
+      if (user.password.startsWith('$2b$')) {
+        isMatch = await bcrypt.compare(password, user.password)
+      } else {
+        isMatch = user.password === password
+      }
+    } catch (e) {
+      isMatch = user.password === password
+    }
+    if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
