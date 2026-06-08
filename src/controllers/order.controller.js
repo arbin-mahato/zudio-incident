@@ -13,6 +13,7 @@ const getOrderHistory = async (req, res) => {
 
     const orders = ordersResult.rows
 
+    // BUG: [MEDIUM] N+1 Query — loops through each order and executes separate queries for items and product details.
     // now we need to get the items for each order
     for (const order of orders) {
       const itemsResult = await pool.query(

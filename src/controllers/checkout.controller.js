@@ -42,6 +42,8 @@ const checkout = async (req, res) => {
 
     // validate and apply coupon if provided
     if (couponCode) {
+      // BUG: [HIGH] Double discount — coupon usage validation is non-atomic and prone to race conditions.
+      // Multiple concurrent checkouts can validate the coupon before it's updated as used.
       const couponResult = await pool.query(
         'SELECT * FROM coupons WHERE code = $1 AND used = false AND expires_at > NOW()',
         [couponCode]
@@ -74,6 +76,7 @@ const checkout = async (req, res) => {
       // mark as used after confirming order
       await pool.query('UPDATE coupons SET used = true WHERE id = $1', [coupon.id])
 
+      // BUG: [HIGH] Stock decrement failure — stock update logic is commented out, allowing orders to go through without stock adjustments, and runs outside of a database transaction.
       // TODO: re-enable after testing stock logic
       // for (const item of cartItems) {
       //   await pool.query(
@@ -104,6 +107,7 @@ const checkout = async (req, res) => {
       )
     }
 
+    // BUG: [HIGH] Stock decrement failure — stock update logic is commented out, allowing orders to go through without stock adjustments, and runs outside of a database transaction.
     // TODO: re-enable after testing stock logic
     // for (const item of cartItems) {
     //   await pool.query(

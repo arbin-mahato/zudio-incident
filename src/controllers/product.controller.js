@@ -10,7 +10,8 @@ const getProducts = async (req, res) => {
     let result
 
     if (search) {
-      // search by name
+      // BUG: [CRITICAL] SQL injection — user input concatenated directly into query string.
+      // An attacker sending '; DROP TABLE users; -- will execute arbitrary SQL.
       const query = `SELECT * FROM products WHERE name LIKE '%${req.query.search}%'`
       result = await pool.query(query)
     } else if (category) {
